@@ -1,6 +1,4 @@
 #include <GarrysMod/Lua/Interface.h>
-#include <stdio.h>
-#include <tier1/strtools.h>
 #include <windows.h>
 
 extern "C"
@@ -45,8 +43,14 @@ LUA_FUNCTION( loadfunc )
 {
 	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
+	LUA->CheckType( 3, GarrysMod::Lua::Type::BOOL );
 
-	const char *libpath = lua_pushfstring( state, "garrysmod\\lua\\%s", LUA->GetString( 1 ) );
+	const char *libpath = LUA->GetString( 1 );
+	const char *fullpath = nullptr;
+	if( LUA->GetBool( 3 ) )
+		fullpath = lua_pushfstring( state, "garrysmod\\lua\\bin\\%s", libpath );
+	else
+		fullpath = lua_pushfstring( state, "garrysmod\\lua\\libraries\\%s", libpath );
 
 	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_REG );
 	lua_pushfstring( state, "LOADLIB: %s", libpath );
@@ -64,9 +68,9 @@ LUA_FUNCTION( loadfunc )
 	}
 	else
 	{
-		HMODULE handle = LoadLibrary( libpath );
+		HMODULE handle = LoadLibrary( fullpath );
 		if( handle == nullptr )
-			return push_system_error( state, "link_fail" );
+			return push_system_error( state, "load_fail" );
 
 		func = reinterpret_cast<GarrysMod::Lua::CFunc>( GetProcAddress( handle, LUA->GetString( 2 ) ) );
 		if( func == nullptr )
