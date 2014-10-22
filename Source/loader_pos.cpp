@@ -27,9 +27,9 @@ static void SubstituteChar( std::string &path, char part, char sub )
 	}
 }
 
-static void RemovePart( std::string &path, const char *part )
+static void RemovePart( std::string &path, const std::string &part )
 {
-	size_t len = strlen( part ), pos = path.find( part );
+	size_t len = part.size( ), pos = path.find( part );
 	while( pos != path.npos )
 	{
 		path.erase( pos, len );
@@ -78,9 +78,9 @@ LUA_FUNCTION( loadfunc )
 	{
 		std::string fullpath;
 		if( LUA->GetBool( 3 ) )
-			fullpath = "garrysmod\\lua\\bin\\";
+			fullpath = "garrysmod/lua/bin/";
 		else
-			fullpath = "garrysmod\\lua\\libraries\\";
+			fullpath = "garrysmod/lua/libraries/";
 
 		fullpath += libpath;
 
