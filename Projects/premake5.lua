@@ -37,16 +37,22 @@ solution("gm_loadfunc")
 		targetprefix("")
 		targetextension(".dll")
 
+		filter("action:gmake")
+			buildoptions({"-std=c++11"})
+			linkoptions({"-static-libgcc", "-static-libstdc++"})
+
 		filter("system:windows")
 			files({SOURCE_FOLDER .. "/loader_win.cpp"})
 			targetsuffix("_win32")
 
 		filter("system:linux")
 			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
+			links({"dl"})
 			targetsuffix("_linux")
 
 		filter({"system:macosx"})
 			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
+			links({"dl"})
 			targetsuffix("_mac")
 
 	project("gmsv_loadfunc")
@@ -62,14 +68,20 @@ solution("gm_loadfunc")
 		targetprefix("")
 		targetextension(".dll")
 
+		filter("action:gmake")
+			buildoptions({"-std=c++11"})
+			linkoptions({"-static-libgcc", "-static-libstdc++"})
+
 		filter("system:windows")
 			files({SOURCE_FOLDER .. "/loader_win.cpp"})
 			targetsuffix("_win32")
 
 		filter("system:linux")
 			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
+			links({"dl"})
 			targetsuffix("_linux")
 
 		filter({"system:macosx"})
 			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
+			links({"dl"})
 			targetsuffix("_mac")
