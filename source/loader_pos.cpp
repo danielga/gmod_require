@@ -47,7 +47,7 @@ static bool HasWhitelistedExtension( const std::string &path )
 			return false;
 
 		std::string ext = path.substr( extstart + 1 );
-		return ext == "dll";
+		return ext == "dll" || ext == "so" || ext == "dylib";
 	}
 
 	return false;
