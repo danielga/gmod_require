@@ -1,7 +1,7 @@
 gmod_require
 ============
 
-A Garry's Mod module for obtaining pointers to functions inside of modules (specially useful for loading Lua only modules).
+Modules for Garry's Mod for obtaining pointers to functions inside of modules (specially useful for loading Lua only modules).
 
 Info
 -------
