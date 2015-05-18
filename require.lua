@@ -15,10 +15,10 @@ package.preload.table = function() return table end
 local io = {}
 package.preload.io = function() return io end
 
-require("loadfunc")
+require("loadlib")
 
-local loadfunc = loadfunc
-_G.loadfunc = nil
+local loadlib = loadlib
+_G.loadlib = nil
 
 local iswindows = system.IsWindows()
 local islinux = system.IsLinux()
@@ -26,7 +26,7 @@ local dll_prefix = CLIENT and "gmcl" or "gmsv"
 local dll_suffix = iswindows and "win32" or (islinux and "linux" or "mac")
 local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 
-local function loadlua(name, file_path)
+local function loadluamodule(name, file_path)
 	local src_file = file.Open(file_path, "r", "LUA")
 	if not src_file then
 		return ("\n\tno file '%s'"):format(file_path)
@@ -50,13 +50,13 @@ local function loadlua(name, file_path)
 	return load_result
 end
 
-local function loadlib(name, file_path, entrypoint_name, isgmodmodule)
+local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
 	local separator = iswindows and "\\" or "/"
 	if not file.Exists(("lua/%s/%s"):format(isgmodmodule and "bin" or "libraries", file_path), "MOD") then
 		return ("\n\tno file '%s'"):format(file_path)
 	end
 
-	local result, msg, reason = loadfunc(iswindows and file_path:gsub("/", separator) or file_path, entrypoint_name, isgmodmodule)
+	local result, msg, reason = loadlib(iswindows and file_path:gsub("/", separator) or file_path, entrypoint_name, isgmodmodule)
 	if not result then
 		assert(reason == "load_fail" or reason == "no_func", ("%s (%u)"):format(reason, #reason))
 		if reason == "load_fail" then
@@ -86,33 +86,33 @@ package.loaders = {
 
 	-- try to fetch the pure Lua module from lua/includes/modules ("à la" Garry's Mod)
 	function(name)
-		return loadlua(name, ("includes/modules/%s.lua"):format(name))
+		return loadluamodule(name, ("includes/modules/%s.lua"):format(name))
 	end,
 
 	-- try to fetch the pure Lua module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		return loadlua(name, ("libraries/%s.lua"):format(name:gsub("%.", "/")))
+		return loadluamodule(name, ("libraries/%s.lua"):format(name:gsub("%.", "/")))
 	end,
 
 	-- try to fetch the binary module from lua/bin ("à la" Garry's Mod)
 	function(name)
 		local file_path = ("%s_%s_%s.dll"):format(dll_prefix, name, dll_suffix)
 		local entrypoint_name = "gmod13_open"
-		return loadlib(name, file_path, entrypoint_name, true)
+		return loadlibmodule(name, file_path, entrypoint_name, true)
 	end,
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
 	function(name)
 		local file_path = ("%s.%s"):format(name:gsub("%.", "/"), dll_extension)
 		local entrypoint_name = ("luaopen_%s"):format(name:gsub("%.", "_"))
-		return loadlib(name, file_path, entrypoint_name, false)
+		return loadlibmodule(name, file_path, entrypoint_name, false)
 	end,
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
 	function(name)
 		local file_path = ("%s.%s"):format(name:match("^([^%.]*)"), dll_extension)
 		local entrypoint_name = ("luaopen_%s"):format(name:gsub("%.", "_"))
-		return loadlib(name, file_path, entrypoint_name, false)
+		return loadlibmodule(name, file_path, entrypoint_name, false)
 	end
 }
 

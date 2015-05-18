@@ -1,87 +1,33 @@
-GARRYSMOD_MODULE_BASE_FOLDER = "../gmod-module-base"
-SOURCE_FOLDER = "../source"
-PROJECT_FOLDER = os.get() .. "/" .. _ACTION
+newoption({
+	trigger = "gmcommon",
+	description = "Sets the path to the garrysmod_common (https://bitbucket.org/danielga/garrysmod_common) directory",
+	value = "path to garrysmod_common dir"
+})
 
-solution("gm_loadfunc")
-	language("C++")
-	location(PROJECT_FOLDER)
-	warnings("Extra")
-	flags({"NoPCH", "StaticRuntime"})
-	platforms({"x86"})
-	configurations({"Release", "Debug"})
+local gmcommon = _OPTIONS.gmcommon or os.getenv("GARRYSMOD_COMMON")
+if gmcommon == nil then
+	error("you didn't provide a path to your garrysmod_common (https://bitbucket.org/danielga/garrysmod_common) directory")
+end
 
-	filter("platforms:x86")
-		architecture("x32")
+include(gmcommon)
 
-	filter("configurations:Release")
-		optimize("On")
-		vectorextensions("SSE2")
-		objdir(PROJECT_FOLDER .. "/intermediate")
-		targetdir(PROJECT_FOLDER .. "/release")
+CreateSolution("loadlib")
+	CreateProject(SERVERSIDE, SOURCES_MANUAL)
+		AddFiles("main.cpp")
 
-	filter("configurations:Debug")
-		flags({"Symbols"})
-		objdir(PROJECT_FOLDER .. "/intermediate")
-		targetdir(PROJECT_FOLDER .. "/debug")
+		SetFilter(FILTER_WINDOWS)
+			AddFiles("loader_win.cpp")
 
-	project("gmcl_loadfunc")
-		kind("SharedLib")
-		defines({"GMMODULE", "LOADFUNC_CLIENT"})
-		includedirs({
-			SOURCE_FOLDER,
-			GARRYSMOD_MODULE_BASE_FOLDER .. "/include"
-		})
-		files({SOURCE_FOLDER .. "/main.cpp"})
-		vpaths({["Headers"] = SOURCE_FOLDER .. "/*.hpp", ["Sources"] = SOURCE_FOLDER .. "/**.cpp"})
+		SetFilter(FILTER_LINUX, FILTER_MACOSX)
+			AddFiles("loader_pos.cpp")
+			links("dl")
 
-		targetprefix("")
-		targetextension(".dll")
+	CreateProject(CLIENTSIDE, SOURCES_MANUAL)
+		AddFiles("main.cpp")
 
-		filter("action:gmake")
-			buildoptions({"-std=c++11"})
-			linkoptions({"-static-libgcc", "-static-libstdc++"})
+		SetFilter(FILTER_WINDOWS)
+			AddFiles("loader_win.cpp")
 
-		filter("system:windows")
-			files({SOURCE_FOLDER .. "/loader_win.cpp"})
-			targetsuffix("_win32")
-
-		filter("system:linux")
-			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
-			links({"dl"})
-			targetsuffix("_linux")
-
-		filter({"system:macosx"})
-			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
-			links({"dl"})
-			targetsuffix("_mac")
-
-	project("gmsv_loadfunc")
-		kind("SharedLib")
-		defines({"GMMODULE", "LOADFUNC_SERVER"})
-		includedirs({
-			SOURCE_FOLDER,
-			GARRYSMOD_MODULE_BASE_FOLDER .. "/include"
-		})
-		files({SOURCE_FOLDER .. "/main.cpp"})
-		vpaths({["Headers"] = SOURCE_FOLDER .. "/*.hpp", ["Sources"] = SOURCE_FOLDER .. "/**.cpp"})
-
-		targetprefix("")
-		targetextension(".dll")
-
-		filter("action:gmake")
-			buildoptions({"-std=c++11"})
-			linkoptions({"-static-libgcc", "-static-libstdc++"})
-
-		filter("system:windows")
-			files({SOURCE_FOLDER .. "/loader_win.cpp"})
-			targetsuffix("_win32")
-
-		filter("system:linux")
-			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
-			links({"dl"})
-			targetsuffix("_linux")
-
-		filter({"system:macosx"})
-			files({SOURCE_FOLDER .. "/loader_pos.cpp"})
-			links({"dl"})
-			targetsuffix("_mac")
+		SetFilter(FILTER_LINUX, FILTER_MACOSX)
+			AddFiles("loader_pos.cpp")
+			links("dl")

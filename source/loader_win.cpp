@@ -74,7 +74,7 @@ static bool HasWhitelistedExtension( const std::string &path )
 	return false;
 }
 
-LUA_FUNCTION( loadfunc )
+LUA_FUNCTION( loadlib )
 {
 	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
 	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
