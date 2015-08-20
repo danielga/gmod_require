@@ -1,18 +1,18 @@
 #include <GarrysMod/Lua/Interface.h>
+#include <cstdint>
 
-extern int loadlib( lua_State *state );
+extern int32_t loadlib( lua_State *state );
 
 GMOD_MODULE_OPEN( )
 {
-	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_GLOB );
 	LUA->PushCFunction( loadlib );
-	LUA->SetField( -2, "loadlib" );
-
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "loadlib" );
 	return 0;
 }
 
 GMOD_MODULE_CLOSE( )
 {
-	(void)state;
+	LUA->PushNil( );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "loadlib" );
 	return 0;
 }

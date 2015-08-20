@@ -6,15 +6,15 @@ local _LOADLIB = _R._LOADLIB
 local prefix = SERVER and "gmsv" or "gmcl"
 local suffix = system.IsWindows() and "win32" or (system.IsLinux() and "linux" or "macos")
 local sep = system.IsWindows() and "\\" or "/"
-local fmt = "^LOADLIB: .+" .. sep .. "garrysmod" .. sep .. "lua" .. sep .. "bin" .. sep .. prefix .. "_%s_" .. suffix .. ".dll$"
+local fmt = string.format("^LOADLIB: .+%sgarrysmod%slua%sbin%s%s_%%s_%s.dll$", sep, sep, sep, sep, prefix, suffix)
 
 function unrequire(name)
 	_MODULES[name] = nil
 	package_loaded[name] = nil
 
-	local loadlib = fmt:format(name)
+	local loadlib = string.format(fmt, name)
 	for name, mod in pairs(_R) do
-		if type(name) == "string" and name:find(loadlib) then
+		if type(name) == "string" and string.find(name, loadlib) then
 			_LOADLIB.__gc(mod)
 			_R[name] = nil
 			break

@@ -1,5 +1,6 @@
 #include <GarrysMod/Lua/Interface.h>
 #include <string>
+#include <cstdint>
 #include <windows.h>
 
 #define GOOD_SEPARATOR '\\'
@@ -8,7 +9,7 @@
 #define PARENT_DIRECTORY "..\\"
 #define CURRENT_DIRECTORY ".\\"
 
-static int PushSystemError( lua_State *state, const char *error )
+static int32_t PushSystemError( lua_State *state, const char *error )
 {
 	LUA->PushNil( );
 
@@ -110,8 +111,6 @@ LUA_FUNCTION( loadlib )
 
 	const char *fullpath = LUA->GetString( -1 );
 
-	LUA->PushSpecial( GarrysMod::Lua::SPECIAL_REG );
-
 	{
 		std::string loadlib = "LOADLIB: ";
 		loadlib += libpath;
@@ -119,7 +118,7 @@ LUA_FUNCTION( loadlib )
 	}
 
 	LUA->Push( -1 );
-	LUA->GetTable( -3 );
+	LUA->GetTable( GarrysMod::Lua::INDEX_REGISTRY );
 
 	GarrysMod::Lua::CFunc func = nullptr;
 	if( !LUA->IsType( -1, GarrysMod::Lua::Type::NIL ) )
@@ -148,10 +147,10 @@ LUA_FUNCTION( loadlib )
 		HMODULE *libhandle = reinterpret_cast<HMODULE *>( LUA->NewUserdata( sizeof( HMODULE ) ) );
 		*libhandle = handle;
 
-		LUA->GetField( -3, "_LOADLIB" );
+		LUA->GetField( GarrysMod::Lua::INDEX_REGISTRY, "_LOADLIB" );
 		LUA->SetMetaTable( -2 );
 
-		LUA->SetTable( -3 );
+		LUA->SetTable( GarrysMod::Lua::INDEX_REGISTRY );
 	}
 
 	LUA->PushCFunction( func );
