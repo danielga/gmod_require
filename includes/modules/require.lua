@@ -18,8 +18,6 @@ package.preload.io = function() return io end
 require("loadlib")
 
 local loadlib = loadlib
-_G.loadlib = nil
-
 local iswindows = system.IsWindows()
 local islinux = system.IsLinux()
 local dll_prefix = CLIENT and "gmcl" or "gmsv"
@@ -28,7 +26,7 @@ local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 
 local function loadluamodule(name, file_path)
 	local src_file = file.Open(file_path, "r", "LUA")
-	if not src_file then
+	if src_file == nil then
 		return string.format("\n\tno file '%s'", file_path)
 	end
 
@@ -37,14 +35,11 @@ local function loadluamodule(name, file_path)
 
 	local load_result = CompileString(file_text, file_path, false)
 	if type(load_result) == "string" then
-		error(
-			string.format(
-				"error loading module '%s' from file '%s':\n\t%s",
-				name,
-				file_path,
-				load_result
-			),
-			4
+		return string.format(
+			"error loading module '%s' from file '%s':\n\t%s",
+			name,
+			file_path,
+			load_result
 		)
 	end
 
@@ -58,17 +53,13 @@ local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
 	end
 
 	local result, msg, reason = loadlib(iswindows and string.gsub(file_path, "/", separator) or file_path, entrypoint_name, isgmodmodule)
-	if not result then
-		assert(reason == "load_fail" or reason == "no_func", string.format("%s (%u)", reason, #reason))
+	if result == nil then
 		if reason == "load_fail" then
-			error(
-				string.format(
-					"error loading module '%s' from file '%s':\n\t%s",
-					name,
-					file_path,
-					msg
-				),
-				4
+			return string.format(
+				"error loading module '%s' from file '%s':\n\t%s",
+				name,
+				file_path,
+				msg
 			)
 		elseif reason == "no_func" then
 			return string.format("\n\tno module '%s' in file '%s'", name, file_path)
@@ -142,7 +133,7 @@ function require(name)
 	    end
 	end
 
-	if not loader then
+	if loader == nil then
 		error(string.format("module '%s' not found:%s", name, table.concat(messages)), 2)
 	else
 		_registry._LOADED[name] = _sentinel
