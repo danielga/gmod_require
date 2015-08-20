@@ -27,7 +27,7 @@ local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 local function loadluamodule(name, file_path)
 	local src_file = file.Open(file_path, "r", "LUA")
 	if src_file == nil then
-		return string.format("\n\tno file '%s'", file_path)
+		return string.format("no file '%s'", file_path)
 	end
 
 	local file_text = src_file:Read(src_file:Size())
@@ -36,7 +36,7 @@ local function loadluamodule(name, file_path)
 	local load_result = CompileString(file_text, file_path, false)
 	if type(load_result) == "string" then
 		return string.format(
-			"error loading module '%s' from file '%s':\n\t%s",
+			"error loading module '%s' from file '%s': %s",
 			name,
 			file_path,
 			load_result
@@ -49,20 +49,20 @@ end
 local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
 	local separator = iswindows and "\\" or "/"
 	if not file.Exists(string.format("lua/%s/%s", isgmodmodule and "bin" or "libraries", file_path), "MOD") then
-		return string.format("\n\tno file '%s'", file_path)
+		return string.format("no file '%s'", file_path)
 	end
 
 	local result, msg, reason = loadlib(iswindows and string.gsub(file_path, "/", separator) or file_path, entrypoint_name, isgmodmodule)
 	if result == nil then
 		if reason == "load_fail" then
 			return string.format(
-				"error loading module '%s' from file '%s':\n\t%s",
+				"error loading module '%s' from file '%s': %s",
 				name,
 				file_path,
 				msg
 			)
 		elseif reason == "no_func" then
-			return string.format("\n\tno module '%s' in file '%s'", name, file_path)
+			return string.format("no module '%s' in file '%s'", name, file_path)
 		end
 	end
 
@@ -74,7 +74,7 @@ end
 package.loaders = {
 	-- try to fetch the module from package.preload
 	function(name)
-		return package.preload[name] or string.format("\n\tno field package.preload['%s']", name)
+		return package.preload[name] or string.format("no field package.preload['%s']", name)
 	end,
 
 	-- try to fetch the pure Lua module from lua/includes/modules ("à la" Garry's Mod)
@@ -90,8 +90,7 @@ package.loaders = {
 	-- try to fetch the binary module from lua/bin ("à la" Garry's Mod)
 	function(name)
 		local file_path = string.format("%s_%s_%s.dll", dll_prefix, name, dll_suffix)
-		local entrypoint_name = "gmod13_open"
-		return loadlibmodule(name, file_path, entrypoint_name, true)
+		return loadlibmodule(name, file_path, "gmod13_open", true)
 	end,
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
@@ -134,7 +133,7 @@ function require(name)
 	end
 
 	if loader == nil then
-		error(string.format("module '%s' not found:%s", name, table.concat(messages)), 2)
+		error(string.format("module '%s' not found:%s", name, table.concat(messages, "\n")), 2)
 	else
 		_registry._LOADED[name] = _sentinel
 		local result = loader(name)
