@@ -14,4 +14,4 @@ If stuff starts erroring or fails to work, be sure to check the correct line end
 This project requires [garrysmod_common][1], a framework to facilitate the creation of compilations files (Visual Studio, make, XCode, etc). Simply set the environment variable 'GARRYSMOD_COMMON' or the premake option 'gmcommon' to the path of your local copy of [garrysmod_common][1].
 
 
-  [1]: https://bitbucket.org/danielga/garrysmod_common
+  [1]: https://github.com/danielga/garrysmod_common
