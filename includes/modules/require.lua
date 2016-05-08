@@ -8,26 +8,34 @@ end
 
 assert(type(package.preload) == "table", "package.preload is not a table?")
 
+local io = {}
+package.preload.io = function() return io end
+package.preload.bit = function() return bit end
 package.preload.timer = function() return timer end
 package.preload.string = function() return string end
 package.preload.math = function() return math end
 package.preload.table = function() return table end
-local io = {}
-package.preload.io = function() return io end
+package.preload.jit = function() return jit end
+package.preload["jit.opt"] = function() return jit.opt end
+package.preload["jit.util"] = function() return jit.util end
+package.preload.os = function() return os end
+package.preload.package = function() return package end
 
 require("loadlib")
 
 local loadlib = loadlib
+_G.loadlib = nil
+
 local iswindows = system.IsWindows()
 local islinux = system.IsLinux()
 local dll_prefix = CLIENT and "gmcl" or "gmsv"
-local dll_suffix = iswindows and "win32" or (islinux and "linux" or "mac")
+local dll_suffix = iswindows and "win32" or (islinux and "linux" or "osx")
 local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 
 local function loadluamodule(name, file_path)
 	local src_file = file.Open(file_path, "r", "LUA")
-	if src_file == nil then
-		return string.format("no file '%s'", file_path)
+	if not src_file then
+		return "\n\tno file '" .. file_path .. "'"
 	end
 
 	local file_text = src_file:Read(src_file:Size())
@@ -35,12 +43,7 @@ local function loadluamodule(name, file_path)
 
 	local load_result = CompileString(file_text, file_path, false)
 	if type(load_result) == "string" then
-		return string.format(
-			"error loading module '%s' from file '%s': %s",
-			name,
-			file_path,
-			load_result
-		)
+		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. load_result, 4)
 	end
 
 	return load_result
@@ -48,21 +51,17 @@ end
 
 local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
 	local separator = iswindows and "\\" or "/"
-	if not file.Exists(string.format("lua/%s/%s", isgmodmodule and "bin" or "libraries", file_path), "MOD") then
-		return string.format("no file '%s'", file_path)
+	if not file.Exists("lua/" .. (isgmodmodule and "bin" or "libraries") .. "/" .. file_path, "MOD") then
+		return "\n\tno file '" .. file_path .. "'"
 	end
 
 	local result, msg, reason = loadlib(iswindows and string.gsub(file_path, "/", separator) or file_path, entrypoint_name, isgmodmodule)
-	if result == nil then
+	if not result then
+		assert(reason == "load_fail" or reason == "no_func", reason .. " (" .. #reason .. ")")
 		if reason == "load_fail" then
-			return string.format(
-				"error loading module '%s' from file '%s': %s",
-				name,
-				file_path,
-				msg
-			)
+			error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. msg, 4)
 		elseif reason == "no_func" then
-			return string.format("no module '%s' in file '%s'", name, file_path)
+			return "\n\tno module '" .. name .. "' in file '" .. file_path .. "'"
 		end
 	end
 
@@ -74,36 +73,37 @@ end
 package.loaders = {
 	-- try to fetch the module from package.preload
 	function(name)
-		return package.preload[name] or string.format("no field package.preload['%s']", name)
+		return package.preload[name] or "\n\tno field package.preload['" .. name .. "']"
 	end,
 
 	-- try to fetch the pure Lua module from lua/includes/modules ("à la" Garry's Mod)
 	function(name)
-		return loadluamodule(name, string.format("includes/modules/%s.lua", name))
+		return loadluamodule(name, "includes/modules/" .. name .. ".lua")
 	end,
 
 	-- try to fetch the pure Lua module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		return loadluamodule(name, string.format("libraries/%s.lua", string.gsub(name, "%.", "/")))
+		return loadluamodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. ".lua")
 	end,
 
 	-- try to fetch the binary module from lua/bin ("à la" Garry's Mod)
 	function(name)
-		local file_path = string.format("%s_%s_%s.dll", dll_prefix, name, dll_suffix)
-		return loadlibmodule(name, file_path, "gmod13_open", true)
+		local file_path = dll_prefix .. "_" .. name .. "_" .. dll_suffix .. ".dll"
+		local entrypoint_name = "gmod13_open"
+		return loadlibmodule(name, file_path, entrypoint_name, true)
 	end,
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		local file_path = string.format("%s.%s", string.gsub(name, "%.", "/"), dll_extension)
-		local entrypoint_name = string.format("luaopen_%s", string.gsub(name, "%.", "_"))
+		local file_path = string.gsub(name, "%.", "/") .. "." .. dll_extension
+		local entrypoint_name = "luaopen_" .. string.gsub(name, "%.", "_")
 		return loadlibmodule(name, file_path, entrypoint_name, false)
 	end,
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		local file_path = string.format("%s.%s", string.match(name, "^([^%.]*)"), dll_extension)
-		local entrypoint_name = string.format("luaopen_%s", string.gsub(name, "%.", "_"))
+		local file_path = string.match(name, "^([^%.]*)") .. "." .. dll_extension
+		local entrypoint_name = "luaopen_" .. string.gsub(name, "%.", "_")
 		return loadlibmodule(name, file_path, entrypoint_name, false)
 	end
 }
@@ -115,25 +115,26 @@ function require(name)
 
 	local loaded_val = _registry._LOADED[name]
 	if loaded_val == _sentinel then
-		error(string.format("loop or previous error loading module '%s'", name), 2)
+		error("loop or previous error loading module '" .. name .."'", 2)
 	elseif loaded_val ~= nil then
 		return loaded_val
 	end
 
 	local messages = {""}
 	local loader = nil
-	for i = 1, #package.loaders do
-	    local result = package.loaders[i](name)
-	    if type(result) == "function" then
-	        loader = result
-	        break
-	    elseif type(result) == "string" then
-	        messages[#messages + 1] = result
-	    end
+
+	for _, searcher in ipairs(package.loaders) do
+		local result = searcher(name)
+		if type(result) == "function" then
+			loader = result
+			break
+		elseif type(result) == "string" then
+			messages[#messages + 1] = result
+		end
 	end
 
-	if loader == nil then
-		error(string.format("module '%s' not found:%s", name, table.concat(messages, "\n")), 2)
+	if not loader then
+		error("module '" .. name .. "' not found: " .. table.concat(messages), 2)
 	else
 		_registry._LOADED[name] = _sentinel
 		local result = loader(name)

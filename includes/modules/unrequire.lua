@@ -4,7 +4,7 @@ local _R = debug.getregistry()
 local _LOADLIB = _R._LOADLIB
 
 local prefix = SERVER and "gmsv" or "gmcl"
-local suffix = system.IsWindows() and "win32" or (system.IsLinux() and "linux" or "macos")
+local suffix = system.IsWindows() and "win32" or (system.IsLinux() and "linux" or "osx")
 local sep = system.IsWindows() and "\\" or "/"
 local fmt = string.format("^LOADLIB: .+%sgarrysmod%slua%sbin%s%s_%%s_%s.dll$", sep, sep, sep, sep, prefix, suffix)
 
