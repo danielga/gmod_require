@@ -11,7 +11,7 @@ end
 
 include(gmcommon)
 
-CreateSolution({name = "loadlib"})
+CreateWorkspace({name = "loadlib"})
 	CreateProject({serverside = true, manual_files = true})
 		files("../source/main.cpp")
 
