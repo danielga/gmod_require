@@ -9,7 +9,7 @@
 #define PARENT_DIRECTORY "../"
 #define CURRENT_DIRECTORY "./"
 
-static int32_t PushSystemError( lua_State *state, const char *error )
+static int32_t PushSystemError( GarrysMod::Lua::ILuaBase *LUA, const char *error )
 {
 	LUA->PushNil( );
 	LUA->PushString( dlerror( ) );
@@ -106,24 +106,24 @@ LUA_FUNCTION( loadlib )
 
 		func = reinterpret_cast<GarrysMod::Lua::CFunc>( dlsym( *libhandle, LUA->GetString( 2 ) ) );
 		if( func == nullptr )
-			return PushSystemError( state, "no_func" );
+			return PushSystemError( LUA, "no_func" );
 	}
 	else
 	{
 		void *handle = dlopen( fullpath, RTLD_LAZY | RTLD_LOCAL );
 		if( handle == nullptr )
-			return PushSystemError( state, "load_fail" );
+			return PushSystemError( LUA, "load_fail" );
 
 		func = reinterpret_cast<GarrysMod::Lua::CFunc>( dlsym( handle, LUA->GetString( 2 ) ) );
 		if( func == nullptr )
 		{
 			dlclose( handle );
-			return PushSystemError( state, "no_func" );
+			return PushSystemError( LUA, "no_func" );
 		}
 
 		LUA->Pop( 1 );
 
-		void **libhandle = reinterpret_cast<void **>( LUA->NewUserdata( sizeof( void * ) ) );
+		HMODULE *libhandle = LUA->NewUserType<HMODULE>( 255 );
 		*libhandle = handle;
 
 		LUA->GetField( GarrysMod::Lua::INDEX_REGISTRY, "_LOADLIB" );
