@@ -123,7 +123,7 @@ LUA_FUNCTION( loadlib )
 
 		LUA->Pop( 1 );
 
-		void *libhandle = LUA->NewUserType<void *>( 255 );
+		void **libhandle = LUA->NewUserType<void *>( 255 );
 		*libhandle = handle;
 
 		LUA->GetField( GarrysMod::Lua::INDEX_REGISTRY, "_LOADLIB" );
