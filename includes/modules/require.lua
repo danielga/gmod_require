@@ -85,6 +85,11 @@ package.loaders = {
 	function(name)
 		return loadluamodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. ".lua")
 	end,
+	
+	-- try to fetch the pure Lua module from lua/libraries/.../init.lua ("à la" Lua 5.1)
+	function(name)
+		return loadluamodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. "/init.lua")
+	end,
 
 	-- try to fetch the binary module from lua/bin ("à la" Garry's Mod)
 	function(name)
