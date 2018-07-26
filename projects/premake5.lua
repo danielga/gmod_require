@@ -11,23 +11,31 @@ end
 
 include(gmcommon)
 
-CreateWorkspace({name = "loadlib"})
+CreateWorkspace({name = "require.core", abi_compatible = true})
 	CreateProject({serverside = true, manual_files = true})
+		IncludeSDKCommon()
+		IncludeSDKTier0()
+		IncludeSDKTier1()
+
 		files("../source/main.cpp")
 
 		filter("system:windows")
-			files("../source/loader_win.cpp")
+			files("../source/loadlib_win.cpp")
 
 		filter("system:linux or macosx")
-			files("../source/loader_pos.cpp")
+			files("../source/loadlib_pos.cpp")
 			links("dl")
 
 	CreateProject({serverside = false, manual_files = true})
+		IncludeSDKCommon()
+		IncludeSDKTier0()
+		IncludeSDKTier1()
+
 		files("../source/main.cpp")
 
 		filter("system:windows")
-			files("../source/loader_win.cpp")
+			files("../source/loadlib_win.cpp")
 
 		filter("system:linux or macosx")
-			files("../source/loader_pos.cpp")
+			files("../source/loadlib_pos.cpp")
 			links("dl")

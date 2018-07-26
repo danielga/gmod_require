@@ -21,10 +21,7 @@ package.preload["jit.util"] = function() return jit.util end
 package.preload.os = function() return os end
 package.preload.package = function() return package end
 
-require("loadlib")
-
-local loadlib = loadlib
-_G.loadlib = nil
+require("require.core")
 
 local iswindows = system.IsWindows()
 local islinux = system.IsLinux()
@@ -32,21 +29,17 @@ local dll_prefix = CLIENT and "gmcl" or "gmsv"
 local dll_suffix = iswindows and "win32" or (islinux and "linux" or "osx")
 local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 
-local function loadluamodule(name, file_path)
-	local src_file = file.Open(file_path, "r", "LUA")
-	if not src_file then
-		return "\n\tno file '" .. file_path .. "'"
+local function loadfilemodule(name, file_path)
+	local success, value = loadfile(file_path)
+	if success then
+		return value
 	end
 
-	local file_text = src_file:Read(src_file:Size())
-	src_file:Close()
-
-	local load_result = CompileString(file_text, file_path, false)
-	if type(load_result) == "string" then
-		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. load_result, 4)
+	if value then
+		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. errstr, 4)
 	end
 
-	return load_result
+	return "\n\tno file '" .. file_path .. "'"
 end
 
 local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
@@ -78,17 +71,12 @@ package.loaders = {
 
 	-- try to fetch the pure Lua module from lua/includes/modules ("à la" Garry's Mod)
 	function(name)
-		return loadluamodule(name, "includes/modules/" .. name .. ".lua")
+		return loadfilemodule(name, "includes/modules/" .. name .. ".lua")
 	end,
 
 	-- try to fetch the pure Lua module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		return loadluamodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. ".lua")
-	end,
-	
-	-- try to fetch the pure Lua module from lua/libraries/.../init.lua ("à la" Lua 5.1)
-	function(name)
-		return loadluamodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. "/init.lua")
+		return loadfilemodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. ".lua")
 	end,
 
 	-- try to fetch the binary module from lua/bin ("à la" Garry's Mod)
