@@ -23,6 +23,9 @@ package.preload.package = function() return package end
 
 require("require.core")
 
+local loadlib = loadlib
+local loadfile = loadfile
+
 local iswindows = system.IsWindows()
 local islinux = system.IsLinux()
 local dll_prefix = CLIENT and "gmcl" or "gmsv"
