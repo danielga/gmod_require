@@ -36,7 +36,7 @@ local function loadfilemodule(name, file_path)
 	end
 
 	if value then
-		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. errstr, 4)
+		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. value, 4)
 	end
 
 	return "\n\tno file '" .. file_path .. "'"
@@ -108,7 +108,7 @@ function require(name)
 
 	local loaded_val = _registry._LOADED[name]
 	if loaded_val == _sentinel then
-		error("loop or previous error loading module '" .. name .."'", 2)
+		error("loop or previous error loading module '" .. name .. "'", 2)
 	elseif loaded_val ~= nil then
 		return loaded_val
 	end
