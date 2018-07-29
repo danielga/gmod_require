@@ -33,16 +33,12 @@ local dll_suffix = iswindows and "win32" or (islinux and "linux" or "osx")
 local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 
 local function loadfilemodule(name, file_path)
-	local success, value = loadfile(file_path)
-	if success then
-		return value
+	local value, errstr = loadfile(file_path)
+	if not value then
+		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. errstr, 4)
 	end
 
-	if value then
-		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. value, 4)
-	end
-
-	return "\n\tno file '" .. file_path .. "'"
+	return value
 end
 
 local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)

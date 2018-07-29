@@ -3,6 +3,7 @@
 #include <GarrysMod/Lua/LuaShared.h>
 #include <GarrysMod/Interfaces.hpp>
 #include <cstdint>
+#include <cstring>
 
 extern int32_t loadlib( lua_State *state );
 
@@ -12,21 +13,46 @@ static GarrysMod::Lua::ILuaShared *lua_shared = nullptr;
 
 LUA_FUNCTION_STATIC( loadfile )
 {
-	const char *path = LUA->CheckString( 1 );
+	if( !LUA->IsType( 1, GarrysMod::Lua::Type::STRING ) )
+		LUA->ThrowError(
+			"This implementation of \"loadfile\" requires a filename to be provided!" );
+
+	if( LUA->Top( ) >= 2 )
+	{
+		const char *mode = LUA->GetString( 2 );
+		if( std::strchr( mode, 'b' ) != nullptr )
+			LUA->ThrowError(
+				"This implementation of \"loadfile\" doesn't accept binary Lua chunks!" );
+	}
+
+	const char *path = LUA->GetString( 1 );
+	const bool hasenv = LUA->GetType( 3 ) > GarrysMod::Lua::Type::NIL;
 
 	auto lua = static_cast<GarrysMod::Lua::ILuaInterface *>( LUA );
 
 	auto file = lua_shared->LoadFile( path, lua->GetPathID( ), lua->IsClient( ), true );
 	if( file == nullptr )
 	{
-		LUA->PushBool( false );
-		return 1;
+		LUA->PushNil( );
+		LUA->PushFormattedString( "cannot open %s: No such file or directory", path );
+		return 2;
 	}
 
 	const char *contents = file->contents.c_str( );
-	LUA->PushBool( lua->RunStringEx( "", path, contents, false, false, false, false ) );
-	LUA->Push( -2 );
-	return 2;
+	if( !lua->RunStringEx( "", path, contents, false, false, false, false ) )
+	{
+		LUA->PushNil( );
+		LUA->Push( -2 );
+		return 2;
+	}
+
+	if( hasenv )
+	{
+		LUA->Push( 3 );
+		LUA->SetFEnv( -2 );
+	}
+
+	return 1;
 }
 
 GMOD_MODULE_OPEN( )
