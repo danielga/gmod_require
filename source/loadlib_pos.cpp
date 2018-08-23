@@ -1,6 +1,7 @@
 #include "loadlib.hpp"
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <cstring>
 
 char GoodSeparator = '/';
 char BadSeparator = '\0';
