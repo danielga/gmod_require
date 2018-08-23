@@ -1,158 +1,74 @@
-#include <GarrysMod/Lua/Interface.h>
-#include <string>
-#include <cstdint>
+#include "loadlib.hpp"
 #include <windows.h>
+#include <direct.h>
 
-#define GOOD_SEPARATOR '\\'
-#define BAD_SEPARATOR '/'
+char GoodSeparator = '/';
+char BadSeparator = '\0';
 
-#define PARENT_DIRECTORY "..\\"
-#define CURRENT_DIRECTORY ".\\"
+const char ParentDirectory[] = "../";
+const char CurrentDirectory[] = "./";
 
-static int32_t PushSystemError( GarrysMod::Lua::ILuaBase *LUA, const char *error )
+const char RelativePathToBin[] = "garrysmod/lua/bin/";
+const char RelativePathToLibraries[] = "garrysmod/lua/libraries/";
+
+std::string GetSystemError( )
 {
-	LUA->PushNil( );
-
-	char *message = nullptr;
+	char *temp = nullptr;
+	std::string message;
 	DWORD res = FormatMessage(
 		FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
 		nullptr,
 		GetLastError( ),
 		LANG_USER_DEFAULT,
-		reinterpret_cast<char *>( &message ),
+		reinterpret_cast<char *>( &temp ),
 		1,
 		nullptr
 	);
 	if( res != 0 )
 	{
-		LUA->PushString( message, res );
-		LocalFree( message );
+		message = temp;
+		LocalFree( temp );
 	}
 	else
-	{
-		LUA->PushString( "unknown system error" );
-	}
+		message = "unknown system error";
 
-	LUA->PushString( error );
-
-	return 3;
+	return message;
 }
 
-static void SubstituteChar( std::string &path, char part, char sub )
+bool IsWhitelistedExtension( const std::string &ext )
 {
-	size_t pos = path.find( part );
-	while( pos != path.npos )
-	{
-		path.erase( pos, 1 );
-		path.insert( pos, 1, sub );
-		pos = path.find( part, pos + 1 );
-	}
+	return ext == "dll";
 }
 
-static void RemovePart( std::string &path, const std::string &part )
+void *OpenLibrary( const char *path )
 {
-	size_t len = part.size( ), pos = path.find( part );
-	while( pos != path.npos )
-	{
-		path.erase( pos, len );
-		pos = path.find( part, pos );
-	}
+	return LoadLibrary( path );
 }
 
-static bool HasWhitelistedExtension( const std::string &path )
+bool CloseLibrary( void *handle )
 {
-	size_t extstart = path.rfind( '.' );
-	if( extstart != path.npos )
-	{
-		size_t lastslash = path.rfind( GOOD_SEPARATOR );
-		if( lastslash != path.npos && lastslash > extstart )
-			return false;
-
-		std::string ext = path.substr( extstart + 1 );
-		return ext == "dll";
-	}
-
-	return false;
+	return FreeLibrary( reinterpret_cast<HMODULE>( handle ) );
 }
 
-LUA_FUNCTION( loadlib )
+GarrysMod::Lua::CFunc FindFunction( void *handle, const char *name )
 {
-	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
-	LUA->CheckType( 3, GarrysMod::Lua::Type::BOOL );
+	return reinterpret_cast<GarrysMod::Lua::CFunc>( GetProcAddress(
+		reinterpret_cast<HMODULE>( handle ), name ) );
+}
 
+std::string GetFullPath( const std::string &path )
+{
+	std::string fullpath;
+	DWORD size = MAX_PATH;
+	fullpath.resize( size );
+	DWORD len = GetFullPathName( path.c_str( ), size, &fullpath[0], nullptr );
+	if( len == 0 )
+		fullpath.clear( );
+	else if( len >= size )
 	{
-		std::string lib = LUA->GetString( 1 );
-
-		SubstituteChar( lib, BAD_SEPARATOR, GOOD_SEPARATOR );
-
-		RemovePart( lib, PARENT_DIRECTORY );
-		RemovePart( lib, CURRENT_DIRECTORY );
-
-		LUA->PushString( lib.c_str( ) );
+		fullpath.resize( len - 1 );
+		len = GetFullPathName( path.c_str( ), len, &fullpath[0], nullptr );
 	}
 
-	const char *libpath = LUA->GetString( -1 );
-
-	if( !HasWhitelistedExtension( libpath ) )
-		LUA->ThrowError( "path provided has an unauthorized extension" );
-
-	{
-		std::string fullpath;
-		if( LUA->GetBool( 3 ) )
-			fullpath = "garrysmod\\lua\\bin\\";
-		else
-			fullpath = "garrysmod\\lua\\libraries\\";
-
-		fullpath += libpath;
-
-		LUA->PushString( fullpath.c_str( ) );
-	}
-
-	const char *fullpath = LUA->GetString( -1 );
-
-	{
-		std::string loadlib = "LOADLIB: ";
-		loadlib += libpath;
-		LUA->PushString( loadlib.c_str( ) );
-	}
-
-	LUA->Push( -1 );
-	LUA->GetTable( GarrysMod::Lua::INDEX_REGISTRY );
-
-	GarrysMod::Lua::CFunc func = nullptr;
-	if( !LUA->IsType( -1, GarrysMod::Lua::Type::NIL ) )
-	{
-		HMODULE *libhandle = reinterpret_cast<HMODULE *>( LUA->GetUserdata( -1 ) );
-
-		func = reinterpret_cast<GarrysMod::Lua::CFunc>( GetProcAddress( *libhandle, LUA->GetString( 2 ) ) );
-		if( func == nullptr )
-			return PushSystemError( LUA, "no_func" );
-	}
-	else
-	{
-		HMODULE handle = LoadLibrary( fullpath );
-		if( handle == nullptr )
-			return PushSystemError( LUA, "load_fail" );
-
-		func = reinterpret_cast<GarrysMod::Lua::CFunc>( GetProcAddress( handle, LUA->GetString( 2 ) ) );
-		if( func == nullptr )
-		{
-			FreeLibrary( handle );
-			return PushSystemError( LUA, "no_func" );
-		}
-
-		LUA->Pop( 1 );
-
-		HMODULE *libhandle = LUA->NewUserType<HMODULE>( 255 );
-		*libhandle = handle;
-
-		LUA->GetField( GarrysMod::Lua::INDEX_REGISTRY, "_LOADLIB" );
-		LUA->SetMetaTable( -2 );
-
-		LUA->SetTable( GarrysMod::Lua::INDEX_REGISTRY );
-	}
-
-	LUA->PushCFunction( func );
-	return 1;
+	return fullpath;
 }

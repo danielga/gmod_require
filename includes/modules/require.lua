@@ -33,9 +33,13 @@ local dll_suffix = iswindows and "win32" or (islinux and "linux" or "osx")
 local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
 
 local function loadfilemodule(name, file_path)
-	local value, errstr = loadfile(file_path)
+	local value, errstr, reason = loadfile(file_path)
 	if not value then
-		error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. errstr, 4)
+		if reason == "open_fail" then
+			return "\n\tno file '" .. file_path .. "'"
+		elseif reason == "load_fail" then
+			error("error loading module '" .. name .. "' from file '" .. file_path .. "':\n\t" .. errstr, 4)
+		end
 	end
 
 	return value
@@ -57,7 +61,6 @@ local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
 		end
 	end
 
-	debug.setfenv(result, package)
 	return result
 end
 
@@ -76,6 +79,11 @@ package.loaders = {
 	-- try to fetch the pure Lua module from lua/libraries ("à la" Lua 5.1)
 	function(name)
 		return loadfilemodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. ".lua")
+	end,
+
+	-- try to fetch the pure Lua module from lua/libraries/<name>/init.lua ("à la" Lua 5.1)
+	function(name)
+		return loadfilemodule(name, "libraries/" .. string.gsub(name, "%.", "/") .. "/init.lua")
 	end,
 
 	-- try to fetch the binary module from lua/bin ("à la" Garry's Mod)
@@ -100,16 +108,29 @@ package.loaders = {
 	end
 }
 
-local _sentinel = "requiring"
-local _registry = debug.getregistry()
+local sentinel
+do
+	local function errorHandler()
+		error("require() sentinel can't be indexed or updated", 2)
+	end
+
+	sentinel = newproxy and newproxy() or setmetatable({}, {
+		__index = errorHandler,
+		__newindex = errorHandler,
+		__metatable = false
+	})
+end
+
 function require(name)
 	assert(type(name) == "string", type(name))
 
-	local loaded_val = _registry._LOADED[name]
-	if loaded_val == _sentinel then
+	local loaded_val = package.loaded[name]
+	if loaded_val == sentinel then
 		error("loop or previous error loading module '" .. name .. "'", 2)
 	elseif loaded_val ~= nil then
 		return loaded_val
+	elseif _MODULES[name] then
+		return _G[name]
 	end
 
 	local messages = {""}
@@ -128,17 +149,17 @@ function require(name)
 	if not loader then
 		error("module '" .. name .. "' not found: " .. table.concat(messages), 2)
 	else
-		_registry._LOADED[name] = _sentinel
+		package.loaded[name] = sentinel
 		local result = loader(name)
 
 		if result ~= nil then
-			_registry._LOADED[name] = result
+			package.loaded[name] = result
 		end
 
-		if _registry._LOADED[name] == _sentinel then
-			_registry._LOADED[name] = true
+		if package.loaded[name] == sentinel then
+			package.loaded[name] = true
 		end
 
-		return _registry._LOADED[name]
+		return package.loaded[name]
 	end
 end
