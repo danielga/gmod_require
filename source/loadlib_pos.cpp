@@ -1,137 +1,50 @@
-#include <GarrysMod/Lua/Interface.h>
-#include <string>
-#include <cstdint>
+#include "loadlib.hpp"
 #include <dlfcn.h>
+#include <stdlib.h>
 
-#define GOOD_SEPARATOR '/'
-#define BAD_SEPARATOR '\\'
+char GoodSeparator = '/';
+char BadSeparator = '\0';
 
-#define PARENT_DIRECTORY "../"
-#define CURRENT_DIRECTORY "./"
+const char ParentDirectory[] = "../";
+const char CurrentDirectory[] = "./";
 
-static int32_t PushSystemError( GarrysMod::Lua::ILuaBase *LUA, const char *error )
+const char RelativePathToBin[] = "garrysmod/lua/bin/";
+const char RelativePathToLibraries[] = "garrysmod/lua/libraries/";
+
+std::string GetSystemError( )
 {
-	LUA->PushNil( );
-	LUA->PushString( dlerror( ) );
-	LUA->PushString( error );
-	return 3;
+	const char *errstr = dlerror( );
+	return errstr != nullptr ? errstr : "unknown system error";
 }
 
-static void SubstituteChar( std::string &path, char part, char sub )
+bool IsWhitelistedExtension( const std::string &ext )
 {
-	size_t pos = path.find( part );
-	while( pos != path.npos )
-	{
-		path.erase( pos, 1 );
-		path.insert( pos, 1, sub );
-		pos = path.find( part, pos + 1 );
-	}
+	return ext == "dll" || ext == "so" || ext == "dylib";
 }
 
-static void RemovePart( std::string &path, const std::string &part )
+void *OpenLibrary( const char *path )
 {
-	size_t len = part.size( ), pos = path.find( part );
-	while( pos != path.npos )
-	{
-		path.erase( pos, len );
-		pos = path.find( part, pos );
-	}
+	return dlopen( path, RTLD_NOW );
 }
 
-static bool HasWhitelistedExtension( const std::string &path )
+bool CloseLibrary( void *handle )
 {
-	size_t extstart = path.rfind( '.' );
-	if( extstart != path.npos )
-	{
-		size_t lastslash = path.rfind( GOOD_SEPARATOR );
-		if( lastslash != path.npos && lastslash > extstart )
-			return false;
-
-		std::string ext = path.substr( extstart + 1 );
-		return ext == "dll" || ext == "so" || ext == "dylib";
-	}
-
-	return false;
+	return dlclose( handle ) == 0;
 }
 
-LUA_FUNCTION( loadlib )
+GarrysMod::Lua::CFunc FindFunction( void *handle, const char *name )
 {
-	LUA->CheckType( 1, GarrysMod::Lua::Type::STRING );
-	LUA->CheckType( 2, GarrysMod::Lua::Type::STRING );
-	LUA->CheckType( 3, GarrysMod::Lua::Type::BOOL );
+	return reinterpret_cast<GarrysMod::Lua::CFunc>( dlsym( handle, name ) );
+}
 
-	{
-		std::string lib = LUA->GetString( 1 );
-
-		SubstituteChar( lib, BAD_SEPARATOR, GOOD_SEPARATOR );
-
-		RemovePart( lib, PARENT_DIRECTORY );
-		RemovePart( lib, CURRENT_DIRECTORY );
-
-		LUA->PushString( lib.c_str( ) );
-	}
-
-	const char *libpath = LUA->GetString( -1 );
-
-	if( !HasWhitelistedExtension( libpath ) )
-		LUA->ThrowError( "path provided has an unauthorized extension" );
-
-	{
-		std::string fullpath;
-		if( LUA->GetBool( 3 ) )
-			fullpath = "garrysmod/lua/bin/";
-		else
-			fullpath = "garrysmod/lua/libraries/";
-
-		fullpath += libpath;
-
-		LUA->PushString( fullpath.c_str( ) );
-	}
-
-	const char *fullpath = LUA->GetString( -1 );
-
-	{
-		std::string loadlib = "LOADLIB: ";
-		loadlib += libpath;
-		LUA->PushString( loadlib.c_str( ) );
-	}
-
-	LUA->Push( -1 );
-	LUA->GetTable( GarrysMod::Lua::INDEX_REGISTRY );
-
-	GarrysMod::Lua::CFunc func = nullptr;
-	if( !LUA->IsType( -1, GarrysMod::Lua::Type::NIL ) )
-	{
-		void **libhandle = reinterpret_cast<void **>( LUA->GetUserdata( -1 ) );
-
-		func = reinterpret_cast<GarrysMod::Lua::CFunc>( dlsym( *libhandle, LUA->GetString( 2 ) ) );
-		if( func == nullptr )
-			return PushSystemError( LUA, "no_func" );
-	}
+std::string GetFullPath( const std::string &path )
+{
+	std::string fullpath;
+	fullpath.resize( PATH_MAX );
+	if( realpath( path.c_str( ), &fullpath[0] ) != nullptr )
+		fullpath.resize( std::strlen( fullpath.c_str( ) ) );
 	else
-	{
-		void *handle = dlopen( fullpath, RTLD_LAZY | RTLD_LOCAL );
-		if( handle == nullptr )
-			return PushSystemError( LUA, "load_fail" );
+		fullpath.clear( );
 
-		func = reinterpret_cast<GarrysMod::Lua::CFunc>( dlsym( handle, LUA->GetString( 2 ) ) );
-		if( func == nullptr )
-		{
-			dlclose( handle );
-			return PushSystemError( LUA, "no_func" );
-		}
-
-		LUA->Pop( 1 );
-
-		void **libhandle = LUA->NewUserType<void *>( 255 );
-		*libhandle = handle;
-
-		LUA->GetField( GarrysMod::Lua::INDEX_REGISTRY, "_LOADLIB" );
-		LUA->SetMetaTable( -2 );
-
-		LUA->SetTable( GarrysMod::Lua::INDEX_REGISTRY );
-	}
-
-	LUA->PushCFunction( func );
-	return 1;
+	return fullpath;
 }

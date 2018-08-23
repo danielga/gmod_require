@@ -18,7 +18,7 @@ CreateWorkspace({name = "require.core", abi_compatible = true})
 		IncludeSDKTier0()
 		IncludeSDKTier1()
 
-		files("../source/main.cpp")
+		files({"../source/main.cpp", "../source/loadlib.hpp"})
 
 		filter("system:windows")
 			files("../source/loadlib_win.cpp")
@@ -33,7 +33,7 @@ CreateWorkspace({name = "require.core", abi_compatible = true})
 		IncludeSDKTier0()
 		IncludeSDKTier1()
 
-		files("../source/main.cpp")
+		files({"../source/main.cpp", "../source/loadlib.hpp"})
 
 		filter("system:windows")
 			files("../source/loadlib_win.cpp")
