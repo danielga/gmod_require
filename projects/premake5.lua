@@ -5,10 +5,7 @@ newoption({
 })
 
 local gmcommon = _OPTIONS.gmcommon or os.getenv("GARRYSMOD_COMMON")
-if gmcommon == nil then
-	error("you didn't provide a path to your garrysmod_common (https://github.com/danielga/garrysmod_common) directory")
-end
-
+assert(gmcommon ~= nil, "you didn't provide a path to your garrysmod_common (https://github.com/danielga/garrysmod_common) directory")
 include(gmcommon)
 
 CreateWorkspace({name = "require.core", abi_compatible = true})
