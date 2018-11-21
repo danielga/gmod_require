@@ -10,6 +10,9 @@ static SourceSDK::FactoryLoader lua_shared_loader(
 	"lua_shared", false, IS_SERVERSIDE, "garrysmod/bin/" );
 static GarrysMod::Lua::ILuaShared *lua_shared = nullptr;
 
+static const size_t maximum_path_pushes = 100000;
+static size_t pushed_paths = 0;
+
 static int32_t PushError( GarrysMod::Lua::ILuaBase *LUA, int idxError, const char *reason )
 {
 	if( idxError < 0 )
@@ -194,6 +197,36 @@ LUA_FUNCTION_STATIC( loadfile )
 		LUA->SetFEnv( -2 );
 	}
 
+	LUA->PushString( newpath.c_str( ) );
+	return 2;
+}
+
+LUA_FUNCTION_STATIC( PushLuaPath )
+{
+	if( pushed_paths >= maximum_path_pushes )
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
+
+	++pushed_paths;
+	const char *path = LUA->CheckString( 1 );
+	static_cast<GarrysMod::Lua::ILuaInterface *>( LUA )->PushPath( path );
+	LUA->PushBool( true );
+	return 1;
+}
+
+LUA_FUNCTION_STATIC( PopLuaPath )
+{
+	if( pushed_paths == 0 )
+	{
+		LUA->PushBool( false );
+		return 1;
+	}
+
+	--pushed_paths;
+	static_cast<GarrysMod::Lua::ILuaInterface *>( LUA )->PopPath( );
+	LUA->PushBool( true );
 	return 1;
 }
 
@@ -210,6 +243,12 @@ GMOD_MODULE_OPEN( )
 	LUA->PushCFunction( loadfile );
 	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "loadfile" );
 
+	LUA->PushCFunction( PushLuaPath );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "PushLuaPath" );
+
+	LUA->PushCFunction( PopLuaPath );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "PopLuaPath" );
+
 	return 0;
 }
 
@@ -220,6 +259,12 @@ GMOD_MODULE_CLOSE( )
 
 	LUA->PushNil( );
 	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "loadfile" );
+
+	LUA->PushNil( );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "PushLuaPath" );
+
+	LUA->PushNil( );
+	LUA->SetField( GarrysMod::Lua::INDEX_GLOBAL, "PopLuaPath" );
 
 	return 0;
 }
