@@ -155,15 +155,37 @@ LUA_FUNCTION_STATIC( loadfile )
 
 	auto lua = static_cast<GarrysMod::Lua::ILuaInterface *>( LUA );
 
-	auto file = lua_shared->LoadFile( path, lua->GetPathID( ), lua->IsClient( ), true );
+	GarrysMod::Lua::File *file = nullptr;
+
+	std::string newpath;
+	const char *relpath = lua->GetPath( );
+	if( relpath != nullptr )
+	{
+		newpath = relpath;
+		newpath += '/';
+		newpath += path;
+
+		file = lua_shared->LoadFile( newpath.c_str( ), lua->GetPathID( ), lua->IsClient( ), true );
+	}
+
+	if( file == nullptr )
+	{
+		newpath = path;
+
+		file = lua_shared->LoadFile( path, lua->GetPathID( ), lua->IsClient( ), true );
+	}
+
 	if( file == nullptr )
 	{
 		LUA->PushFormattedString( "cannot open %s: No such file or directory", path );
 		return PushError( LUA, -1, "open_fail" );
 	}
 
-	const char *contents = file->contents.c_str( );
-	if( !lua->RunStringEx( "", path, contents, false, false, false, false ) )
+	lua->PushPath( newpath.c_str( ) );
+	const bool success = lua->RunStringEx( file->name.c_str( ), "", file->contents.c_str( ),
+		false, false, false, false );
+	lua->PopPath( );
+	if( !success )
 		return PushError( LUA, -1, "load_fail" );
 
 	if( hasenv )
