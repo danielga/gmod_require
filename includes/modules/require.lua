@@ -42,7 +42,7 @@ local function loadfilemodule(name, file_path)
 		end
 	end
 
-	return value
+	return value, errstr
 end
 
 local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
@@ -135,11 +135,13 @@ function require(name)
 
 	local messages = {""}
 	local loader = nil
+	local luapath = nil
 
 	for _, searcher in ipairs(package.loaders) do
-		local result = searcher(name)
+		local result, path = searcher(name)
 		if type(result) == "function" then
 			loader = result
+			luapath = path
 			break
 		elseif type(result) == "string" then
 			messages[#messages + 1] = result
@@ -150,7 +152,16 @@ function require(name)
 		error("module '" .. name .. "' not found: " .. table.concat(messages), 2)
 	else
 		package.loaded[name] = sentinel
+
+		if luapath ~= nil then
+			PushLuaPath(luapath)
+		end
+
 		local result = loader(name)
+
+		if luapath ~= nil then
+			PopLuaPath()
+		end
 
 		if result ~= nil then
 			package.loaded[name] = result
