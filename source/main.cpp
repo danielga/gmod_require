@@ -106,9 +106,9 @@ LUA_FUNCTION( loadlib )
 	GarrysMod::Lua::CFunc func = nullptr;
 	if( !LUA->IsType( -1, GarrysMod::Lua::Type::NIL ) )
 	{
-		void **libhandle = LUA->GetUserType<void *>( -1, GarrysMod::Lua::Type::USERDATA );
+		void *libhandle = LUA->GetUserType<void>( -1, GarrysMod::Lua::Type::USERDATA );
 
-		func = FindFunction( *libhandle, LUA->GetString( 2 ) );
+		func = FindFunction( libhandle, LUA->GetString( 2 ) );
 		if( func == nullptr )
 			return PushSystemError( LUA, "no_func" );
 	}
