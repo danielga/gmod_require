@@ -6,7 +6,7 @@ newoption({
 
 local gmcommon = _OPTIONS.gmcommon or os.getenv("GARRYSMOD_COMMON")
 assert(gmcommon ~= nil, "you didn't provide a path to your garrysmod_common (https://github.com/danielga/garrysmod_common) directory")
-include(gmcommon)
+include(path.join(gmcommon, "generator.v2.lua"))
 
 CreateWorkspace({name = "require.core", abi_compatible = true})
 	CreateProject({serverside = true, manual_files = true})
@@ -15,13 +15,13 @@ CreateWorkspace({name = "require.core", abi_compatible = true})
 		IncludeSDKTier0()
 		IncludeSDKTier1()
 
-		files({"../source/main.cpp", "../source/loadlib.hpp"})
+		files({"source/main.cpp", "source/loadlib.hpp"})
 
 		filter("system:windows")
-			files("../source/loadlib_win.cpp")
+			files("source/loadlib_win.cpp")
 
 		filter("system:linux or macosx")
-			files("../source/loadlib_pos.cpp")
+			files("source/loadlib_pos.cpp")
 			links("dl")
 
 	CreateProject({serverside = false, manual_files = true})
@@ -30,11 +30,11 @@ CreateWorkspace({name = "require.core", abi_compatible = true})
 		IncludeSDKTier0()
 		IncludeSDKTier1()
 
-		files({"../source/main.cpp", "../source/loadlib.hpp"})
+		files({"source/main.cpp", "source/loadlib.hpp"})
 
 		filter("system:windows")
-			files("../source/loadlib_win.cpp")
+			files("source/loadlib_win.cpp")
 
 		filter("system:linux or macosx")
-			files("../source/loadlib_pos.cpp")
+			files("source/loadlib_pos.cpp")
 			links("dl")

@@ -8,7 +8,7 @@ The only supported compilation platform for this project on Windows is **Visual 
 On Linux, everything should work fine as is, on **release** mode.  
 For Mac OSX, any **Xcode (using the GCC compiler)** version *MIGHT* work as long as the **Mac OSX 10.7 SDK** is used, on **release** mode.  
 These restrictions are not random; they exist because of ABI compatibility reasons.  
-If stuff starts erroring or fails to work, be sure to check the correct line endings (\n and such) are present in the files for each OS.  
+If stuff starts erroring or fails to work, be sure to check the correct line endings (\\n and such) are present in the files for each OS.  
 
 ## Requirements
 
