@@ -26,11 +26,19 @@ require("require.core")
 local loadlib = loadlib
 local loadfile = loadfile
 
-local iswindows = system.IsWindows()
-local islinux = system.IsLinux()
+local is_windows = system.IsWindows()
+local is_linux = system.IsLinux()
+local is_osx = system.IsOSX()
+local is_x64 = jit.arch == "x64"
+local separator = is_windows and "\\" or "/"
+
 local dll_prefix = CLIENT and "gmcl" or "gmsv"
-local dll_suffix = iswindows and "win32" or (islinux and "linux" or "osx")
-local dll_extension = iswindows and "dll" or (islinux and "so" or "dylib")
+local dll_suffix = assert(
+	(is_windows and (is_x64 and "win64" or "win32")) or
+	(is_linux and (is_x64 and "linux64" or "linux")) or
+	(is_osx and "osx")
+)
+local libraries_extension = is_windows and "dll" or (is_linux and "so" or "dylib")
 
 local function loadfilemodule(name, file_path)
 	local value, errstr, reason = loadfile(file_path)
@@ -46,12 +54,11 @@ local function loadfilemodule(name, file_path)
 end
 
 local function loadlibmodule(name, file_path, entrypoint_name, isgmodmodule)
-	local separator = iswindows and "\\" or "/"
 	if not file.Exists("lua/" .. (isgmodmodule and "bin" or "libraries") .. "/" .. file_path, "MOD") then
 		return "\n\tno file '" .. file_path .. "'"
 	end
 
-	local result, msg, reason = loadlib(iswindows and string.gsub(file_path, "/", separator) or file_path, entrypoint_name, isgmodmodule)
+	local result, msg, reason = loadlib(is_windows and string.gsub(file_path, "/", separator) or file_path, entrypoint_name, isgmodmodule)
 	if not result then
 		assert(reason == "load_fail" or reason == "no_func", reason .. " (" .. #reason .. ")")
 		if reason == "load_fail" then
@@ -95,14 +102,14 @@ package.loaders = {
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		local file_path = string.gsub(name, "%.", "/") .. "." .. dll_extension
+		local file_path = string.gsub(name, "%.", "/") .. "." .. libraries_extension
 		local entrypoint_name = "luaopen_" .. string.gsub(name, "%.", "_")
 		return loadlibmodule(name, file_path, entrypoint_name, false)
 	end,
 
 	-- try to fetch the binary module from lua/libraries ("à la" Lua 5.1)
 	function(name)
-		local file_path = string.match(name, "^([^%.]*)") .. "." .. dll_extension
+		local file_path = string.match(name, "^([^%.]*)") .. "." .. libraries_extension
 		local entrypoint_name = "luaopen_" .. string.gsub(name, "%.", "_")
 		return loadlibmodule(name, file_path, entrypoint_name, false)
 	end
