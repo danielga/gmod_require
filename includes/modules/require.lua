@@ -36,7 +36,7 @@ local dll_prefix = CLIENT and "gmcl" or "gmsv"
 local dll_suffix = assert(
 	(is_windows and (is_x64 and "win64" or "win32")) or
 	(is_linux and (is_x64 and "linux64" or "linux")) or
-	(is_osx and "osx")
+	(is_osx and (is_x64 and "osx64" or "osx"))
 )
 local libraries_extension = is_windows and "dll" or (is_linux and "so" or "dylib")
 
