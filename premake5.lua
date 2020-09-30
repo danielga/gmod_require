@@ -13,9 +13,6 @@ include(gmcommon)
 CreateWorkspace({name = "require.core", abi_compatible = true})
 	CreateProject({serverside = true, manual_files = true})
 		IncludeLuaShared()
-		IncludeSDKCommon()
-		IncludeSDKTier0()
-		IncludeSDKTier1()
 
 		files({"source/main.cpp", "source/loadlib.hpp"})
 
@@ -28,9 +25,6 @@ CreateWorkspace({name = "require.core", abi_compatible = true})
 
 	CreateProject({serverside = false, manual_files = true})
 		IncludeLuaShared()
-		IncludeSDKCommon()
-		IncludeSDKTier0()
-		IncludeSDKTier1()
 
 		files({"source/main.cpp", "source/loadlib.hpp"})
 
