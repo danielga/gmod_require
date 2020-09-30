@@ -2,6 +2,7 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <cstring>
+#include <linux/limits.h>
 
 char GoodSeparator = '/';
 char BadSeparator = '\0';
