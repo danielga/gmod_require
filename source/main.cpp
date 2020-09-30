@@ -1,13 +1,12 @@
 #include <GarrysMod/Lua/Interface.h>
 #include <GarrysMod/Lua/LuaInterface.h>
 #include <GarrysMod/Lua/LuaShared.h>
-#include <GarrysMod/Interfaces.hpp>
+#include <GarrysMod/FactoryLoader.hpp>
 #include <cstdint>
 #include <cstring>
 #include "loadlib.hpp"
 
-static SourceSDK::FactoryLoader lua_shared_loader(
-	"lua_shared", false, IS_SERVERSIDE, "garrysmod/bin/" );
+static SourceSDK::FactoryLoader lua_shared_loader( "lua_shared" );
 static GarrysMod::Lua::ILuaShared *lua_shared = nullptr;
 
 static const size_t maximum_path_pushes = 100000;
